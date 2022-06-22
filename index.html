@@ -1,0 +1,167 @@
+<html>
+<head>
+  <style></style>
+</head>
+<body style="background-color:rgb(226, 254, 255)">
+  <h2 style="font-family: Verdana">Singapore Population 2021 Geospatial Choropleth</h2>
+  <p style="font-family: Verdana">Scroll & Pan for smaller areas</p>
+    <div id="mydiv" style="background-color:white"></div>
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+<script>
+        
+
+let width = 1200, height = 600;
+let zoom = d3.zoom()
+  .on('zoom', handleZoom);
+
+function handleZoom(e) {
+  d3.select('svg g')
+    .attr('transform', e.transform);
+}
+
+function initZoom() {
+  d3.select('svg')
+    .call(zoom);
+}
+let svg = d3.select("#mydiv")
+.append("svg")
+    .attr("viewBox", "0 0 " + width + " " + height)
+
+var Tooltip = d3.select("#mydiv")
+    .append("div")
+    .style("opacity", 0)
+    .attr("class", "tooltip")
+    .style("background-color", "white")
+    .style("border", "solid")
+    .style("border-width", "1px")
+    .style("border-radius", "3px")
+    .style("padding", "5px")
+  
+// Data and color scale
+var popDomains = [50, 100, 1000, 5000, 10000, 25000, 50000, 100000]
+var myColors = d3.schemeReds[9]
+var legends = ["< 50", "50 - 100", "100 - 1,000", "1,000 - 5,000","5,000 - 10,000", "10,000 - 25,000", "25,0000 - 50,000", "50,000 - 100,000", "> 100,000"]
+const thresholdScale = d3.scaleThreshold()
+  .domain(popDomains)
+  .range(myColors);
+
+let SGmap = "https://zackreee.github.io/CSC3007-assignment3/SGmap.json"
+let popu = "https://zackreee.github.io/CSC3007-assignment3/Population2021.csv"
+
+// Load external data
+Promise.all([d3.json(SGmap), d3.csv(popu)]).then(data => {
+
+console.log(data[0]);
+console.log(data[1]);
+
+// Setting up population data
+populationData = [];
+    data[0].features.forEach((arg1) => {
+      data[1].forEach((arg2) => {
+        if (
+          arg1.properties.Name.toLowerCase() ==
+          arg2.Subzone.toLowerCase()
+        ) {
+          // populationData[arg1.properties.Name] = arg2.Population;
+          // console.log(arg1.properties.Name, " = ", populationData[arg1.properties.Name])
+          //data[0].features["pop"]=arg2.Population;
+          arg1.properties["Pop"] = arg2.Population
+          
+        }
+      });
+    });
+
+    console.log(data[0]);
+
+// Map and projection
+var projection = d3.geoMercator()
+    .center([103.851959, 1.290270])
+    .fitExtent([[20, 20], [980, 580]], data[0]);
+
+let geopath = d3.geoPath().projection(projection);
+
+svg.append("g")
+    .attr("id", "districts")
+    .selectAll("path")
+    .data(data[0].features)
+    .enter()
+    .append("path")
+    .attr("d", geopath)
+    .attr("stroke", "black")
+    // set the color of each country
+    .attr("fill", function (d) {
+        d.total = d.properties.Pop || 0;
+        return thresholdScale(d.total)})
+    .on("mouseover", function(event, d) {
+      // console.log("MOUSE OVER OVER OVER OVER")
+      Tooltip
+      .style("opacity", 1)
+      .style("position", "absolute")
+    .style("background", "#fff")
+    .style("left", (event.pageX) + "px")
+    .style("top", (event.pageY - 28) + "px")
+      // .style("left", (event.pageX) + "px")
+      // .style("top", (event.pageY - 28) + "px")
+      .text(d.properties.Name +"\r\n Population: " + d.properties.Pop);
+    d3.select(this)
+      .style("stroke", "lime")
+      .style("stroke-width", "1.5")
+      .style("opacity", 1)
+    })
+    .on("mousemove",  function(event, d) {
+      console.log("Moving!!!!")
+      Tooltip
+      .style("opacity", 1)
+      .style("position", "absolute")
+    .style("background", "#fff")
+    .style("left", (event.pageX + 70) + "px")
+    .style("top", (event.pageY) + "px")
+    })
+    .on("mouseleave", function(event, d) {
+      Tooltip
+      .style("opacity", 0)
+      d3.select(this)
+      .style("stroke", "black")
+      .style("opacity", 1)
+      .style("stroke-width", "1")
+    });
+
+    d3.select("svg")
+    .append('text')
+  .attr('x', 10)
+  .attr('y', 25)
+  .attr('stroke', '#2C0800')
+  .style("font-size", 12)
+  .style("font-family", "Courier")
+  .text("Population size")
+
+    
+    for(let i=0; i<myColors.length; i++){
+    d3.select("svg")
+    .append("rect")
+    .attr('x', 10)
+    .attr('y', 30+ 20*i +5)
+    .attr('width', 10)
+    .attr('height', 10)
+    .attr('stroke', '#2C0800')
+    .attr('fill', myColors[i]);
+
+    d3.select("svg")
+    .append('text')
+  .attr('x', 30)
+  .attr('y', 30+ 20*i +14)
+  .attr('stroke', '#2C0800')
+  .style("font-size", 12)
+  .style("font-family", "Courier")
+  .text(legends[i])
+    }
+  })
+  
+initZoom();
+
+</script>
+<!-- jQuery (necessary for Bootstrap's JavaScript plugins) -->
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/1.12.4/jquery.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@3.3.7/dist/js/bootstrap.min.js" integrity="sha384-Tc5IQib027qvyjSMfHjOMaLkfuWVxZxUPnCJA7l2mCWNIpG9mGCD8wGNIcPD7Txa" crossorigin="anonymous"></script>
+</body>
+</html>
